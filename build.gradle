@@ -1,0 +1,24 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "1.2.3"
+}
+
+apply plugin: 'groovy'
+apply plugin: 'maven'
+apply plugin: 'application'
+
+mainClassName = 'EurekaSubtitlesMain'
+
+jar {
+    manifest {
+        attributes('Main-Class': mainClassName)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'org.apache.xmlrpc', name: 'xmlrpc-client', version: '3.1.3'
+    compile 'org.codehaus.groovy:groovy:2.3.7'
+}
