@@ -1,22 +1,30 @@
 import OpenSubtitlesHasher
+import groovy.util.logging.Log4j
+import org.apache.log4j.ConsoleAppender
+import org.apache.log4j.FileAppender
+import org.apache.log4j.TTCCLayout
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 
 import java.util.zip.GZIPInputStream
 
+@Log4j
 class ArchimedesClient {
 
     final String ELL_LANG = "ell"
 
     final String OPEN_SUBTITLES_URL = "http://api.opensubtitles.org/xml-rpc"
 
-    final String UTF8_BOM = "\uFEFF";
+    final String UTF8_BOM = "\uFEFF"
 
     XmlRpcClient client
 
     String token
 
     ArchimedesClient() {
+        log.addAppender(new ConsoleAppender(new TTCCLayout()))
+        log.addAppender(new FileAppender(new TTCCLayout(), 'eureka-subtitles-report.log', false))
+
         XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl()
         config.setServerURL(new URL(OPEN_SUBTITLES_URL))
 
@@ -36,27 +44,33 @@ class ArchimedesClient {
         client.execute("LogOut", [token])
     }
 
-    void discoverSubtitles(String movieFilepath) {
+    void discoverSubtitles(File movieFile) {
+        log.info movieFile.name
+
+        def movieFilepath = movieFile.absolutePath
 
         if (getSubtitleFile(movieFilepath).exists()) {
-            println "Subtitle already there."
+            log.info "Subtitle already there\n"
             return
         }
 
         def movieHash = OpenSubtitlesHasher.computeHash(movieFilepath)
-        println "hash: " + movieHash
-
         def params = [sublanguageid: ELL_LANG, moviehash: movieHash]
         def response = client.execute("SearchSubtitles", [token, [params]])
 
         try {
+            if (response["data"].size() == 0) {
+                log.error "No subtitles found\n"
+                return
+            }
+
             def entry = response["data"].first()
 
             String downloadUrl = entry["SubDownloadLink"]
             String encoding = entry["SubEncoding"]
 
-            println "url: " + downloadUrl
-            println "encoding: " + encoding
+            log.info "Eureka!"
+            log.info "url: ${downloadUrl} [encoding: ${encoding}]\n"
 
             getSubtitleFile(movieFilepath).withWriter('UTF-8') {
                 InputStream subStream = new URL(downloadUrl).openStream()
@@ -67,11 +81,8 @@ class ArchimedesClient {
                 it << subsText
             }
 
-            println("Eureka!")
-
         } catch (Exception ex) {
-            println response
-            ex.printStackTrace()
+            log.debug(response, ex)
         }
     }
 

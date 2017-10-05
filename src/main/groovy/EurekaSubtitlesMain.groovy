@@ -10,8 +10,7 @@ class EurekaSubtitlesMain {
             if (it.name.endsWith('.mp4') ||
                     it.name.endsWith('.mkv') ||
                     it.name.endsWith('.avi')) {
-                println it
-                archimedes.discoverSubtitles(it.absolutePath)
+                archimedes.discoverSubtitles(it)
             }
         }
 
